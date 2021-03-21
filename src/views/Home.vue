@@ -62,7 +62,7 @@ export default {
       quizzes: [],
       correctOption: null,
       incorrectOptions: [],
-      // allOptions: [],
+      allOptions: [],
       selectedOption: null,
       score: 0,
       selectedIndex: null,
@@ -74,32 +74,48 @@ export default {
     };
   },
 
+	watch: {
+		presentIndex() {
+			this.isSelected = false;
+			this.shuffleOptions();
+		}
+	},
+
   methods: {
     async fetchQuiz() {
       try {
-        let response = await x.getQuestions(10);
-        // console.log(response);
-        console.log(response.data.results);
+        // let response = await x.getQuestions(10);
+				const { data } = await x.getQuestions(10);
+        // console.log(response.data.results);
+				this.quizzes = data.results;
+				this.shuffleOptions();
 
-        this.quizzes = response.data.results;
+        // this.quizzes = response.data.results;
 
-        this.correctOption =
-          response.data.results[this.presentIndex].correct_answer;
-        this.incorrectOptions =
-          response.data.results[this.presentIndex].incorrect_answers;
-        console.log(this.incorrectOptions);
-        let combinedOptions = [...this.incorrectOptions, this.correctOption];
-        this.allOptions = _.shuffle(combinedOptions);
-        console.log(this.allOptions);
-        console.log(combinedOptions);
-        this.correctIndex = combinedOptions.indexOf(this.correctOption);
-        console.log(this.correctIndex);
+        // this.correctOption =
+        //   response.data.results[this.presentIndex].correct_answer;
+        // this.incorrectOptions =
+        //   response.data.results[this.presentIndex].incorrect_answers;
+        // console.log(this.incorrectOptions);
+        // let combinedOptions = [...this.incorrectOptions, this.correctOption];
+        // this.allOptions = _.shuffle(combinedOptions);
+        // console.log(this.allOptions);
+        // console.log(combinedOptions);
+        // this.correctIndex = combinedOptions.indexOf(this.correctOption);
+        // console.log(this.correctIndex);
 
         // if ([200, 201].includes()) {}
       } catch (e) {
         console.log(e);
       }
     },
+
+		shuffleOptions() {
+			this.correctOption = this.quizzes[this.presentIndex].correct_answer;
+			const combinedOptions = [...this.quizzes[this.presentIndex].incorrect_answers, this.correctOption];
+			this.allOptions = _.shuffle(combinedOptions);
+			this.correctIndex = combinedOptions.indexOf(this.correctOption);
+		},
 
     previousQuestion() {
       this.presentIndex--;

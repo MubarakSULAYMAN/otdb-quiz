@@ -2,7 +2,7 @@ import RequestService from "@/utils/services/RequestServices.js";
 
 export default {
   getQuestions(amount) {
-    return RequestService.get(`/api.php?amount=${amount}`);
+    return RequestService.get(`/api.php?amount=${amount}&type=multiple`);
   },
 
   getCustomQuestions(amount, category, difficulty, type) {
