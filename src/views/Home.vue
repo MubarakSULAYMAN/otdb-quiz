@@ -1,26 +1,35 @@
 <template>
   <div class="home">
-    <!-- <TheWelcomeModal /> -->
-    <div class="quiz-wrapper">
-      <p class="tag">{{ quizCollection[[presentIndex]].difficulty }}</p>
-      <p class="title">Question {{ presentIndex + 1 }}</p>
-      <!-- <p class="question">
-        {{ quizCollection[`${presentIndex}`].question }}
-      </p> -->
-      <p class="question" v-html="quizCollection[[presentIndex]].question"></p>
+    <div class="quiz-wrapper" v-if="totalQuestions > 0">
+      <div class="span-group">
+        <span>Score</span>
+        <span>Answered</span>
+        <span>Difficulty</span>
+      </div>
+      <div class="span-group">
+        <span>{{ score }} / {{ totalQuestions }}</span>
+        <span>{{ answered }} / {{ totalQuestions }}</span>
+        <span class="tag">{{ questionDifficulty }}</span>
+      </div>
+      <p class="title">Question {{ currentNum }} of {{ totalQuestions }}</p>
+      <p class="question" v-html="currentQuestion"></p>
       <div
         class="options"
-        v-for="option in allOptions"
-        :key="option.presentIndex"
+        v-for="(option, index) in allOptions"
+        :key="option.index"
       >
         <p
-          class="option"
+          :class="{ selected: isSelected && selectedIndex === index }"
           tabindex="0"
-          :class="{ '': !isAnswer, right: isAnswer, wrong: isWrong }"
-          @click="getVal(option)"
-        >
-          {{ option }}
-        </p>
+          v-html="option"
+          @click="getVal(index)"
+        ></p>
+
+        <!-- :class="{
+            selected: 'selected === true',
+            isRight: 'correctAnswer === true',
+            isWrong: 'wrongAnswer === true',
+          }" -->
       </div>
 
       <div class="paginate">
@@ -28,16 +37,10 @@
         <button v-if="presentIndex > 0" @click="previousQuestion">
           Previous
         </button>
-        <button
-          v-if="presentIndex < quizCollection.length - 1"
-          @click="nextQuestion"
-        >
+        <button v-if="presentIndex < totalQuestions - 1" @click="nextQuestion">
           Next
         </button>
-        <button
-          v-if="presentIndex === quizCollection.length - 1"
-          @click="showResults"
-        >
+        <button v-if="presentIndex === totalQuestions - 1" @click="showResults">
           View Results
         </button>
       </div>
@@ -46,25 +49,28 @@
 </template>
 
 <script>
-// @ is an alias to /src
-// import TheWelcomeModal from "@/components/TheWelcomeModal.vue";
 import x from "@/utils/services/RequestHelpers.js";
 import _ from "lodash";
 
 export default {
   name: "Home",
-  components: {
-    // TheWelcomeModal,
-  },
+  components: {},
 
   data() {
     return {
       presentIndex: 0,
-      quizCollection: [],
+      quizzes: [],
       correctOption: null,
       incorrectOptions: [],
-      allOptions: [],
+      // allOptions: [],
       selectedOption: null,
+      score: 0,
+      selectedIndex: null,
+      isSelected: false,
+      answered: 0,
+      correctIndex: null,
+      correctAnswer: false,
+      wrongAnswer: false,
     };
   },
 
@@ -75,7 +81,8 @@ export default {
         // console.log(response);
         console.log(response.data.results);
 
-        this.quizCollection = response.data.results;
+        this.quizzes = response.data.results;
+
         this.correctOption =
           response.data.results[this.presentIndex].correct_answer;
         this.incorrectOptions =
@@ -85,16 +92,12 @@ export default {
         this.allOptions = _.shuffle(combinedOptions);
         console.log(this.allOptions);
         console.log(combinedOptions);
+        this.correctIndex = combinedOptions.indexOf(this.correctOption);
+        console.log(this.correctIndex);
 
-        // if ([200, 201].includes(rootState.request_status)) {
-        //   commit("UPDATE_USER_INFO", response.data);
-        // }
+        // if ([200, 201].includes()) {}
       } catch (e) {
-        // dispatch("showWarning");
-        // commit(
-        //   "UPDATE_ERROR_MESSAGE",
-        //   "Error occured while fetching user details."
-        // );
+        console.log(e);
       }
     },
 
@@ -107,38 +110,50 @@ export default {
       // this.presentIndex = this.presentIndex + 1;
     },
 
-    getVal(option) {
-      console.log(option);
-      this.selectedOption = option;
-      console.log(this.correctOption === option);
-      this.isAnswer;
-      // if (option) {
-      // if (option === this.correctOption) {
-      //   return this.newBackgrounColor;
-      // }
-      // }
+    getVal(index) {
+      this.selectedIndex = index;
+      console.log(index);
+      this.isSelected = true;
+      this.answered++;
+      console.log(this.answered);
+      if (index === this.correctIndex) {
+        this.score++;
+        console.log(this.score);
+        this.correctAnswer = true;
+      }
+
+      if (index !== this.correctIndex) {
+        this.wrongAnswer = true;
+      }
     },
   },
 
   computed: {
-    isAnswer() {
-      return this.selectedOption === this.correctOption;
-      // return this.extractRepos().filter((repo) => {
-      //   return `${repo.full_name}`
-      //     .toLowerCase()
-      //     .includes(this.filter_term.toLowerCase());
-      // });
+    currentQuestion() {
+      return this.quizzes[this.presentIndex].question;
     },
 
-    // newBackgrounColor() {
-    //   if (this.isAnswer) {
-    //     return `background-color: var(--github-green)`;
-    //   } else if (!this.isAnswer) {
-    //     return `background-color: var(--github-red)`;
-    //   } else {
-    //     return "";
+    questionDifficulty() {
+      return this.quizzes[this.presentIndex].difficulty;
+    },
+
+    // difficultyGrade() {
+    //   if (this.questionDifficulty.lowercase === '') {
+    //     return 'green';
     //   }
     // },
+
+    currentNum() {
+      return this.presentIndex + 1;
+    },
+
+    totalQuestions() {
+      return this.quizzes.length;
+    },
+
+    // allOptions() {
+    //     return
+    // }
   },
 
   created() {
@@ -150,9 +165,7 @@ export default {
 <style scoped>
 .home {
   position: relative;
-  /* width: 100vw; */
   height: 97vh;
-  /* background-color: red; */
 }
 
 .quiz-wrapper {
@@ -167,16 +180,17 @@ export default {
   padding: 10px;
   border: 5px solid var(--github-lighter-blue-fade);
   border-radius: 10px;
-  /* background-color: var(--github-lighter-blue-fade); */
+}
+
+.span-group {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .tag {
   color: var(--github-green);
-  /* color: var(--github-purple); */
-  /* color: var(--github-red); */
-  font-size: 10px;
-  font-weight: 600;
-  text-align: right;
   text-transform: uppercase;
 }
 
@@ -187,7 +201,6 @@ export default {
 }
 
 .question {
-  /* color: var(--github-purple); */
   font-weight: 500;
   font-size: 14px;
 }
@@ -205,25 +218,28 @@ p {
   background-color: var(--github-gray-light);
 }
 
-.options p:hover,
-.options p:focus {
-  color: var(--github-white);
+.options p:hover {
   background-color: var(--github-gray-dark);
+}
+
+.options p:hover,
+.selected {
+  color: var(--github-white);
   cursor: default;
 }
 
-.options p:focus {
+.selected {
   border-color: var(--github-blue);
   background-color: var(--github-blue);
   box-shadow: 0 0 0 3px var(--github-lighter-blue);
   outline: none;
 }
 
-.right {
+.isRight {
   background-color: var(--github-green);
 }
 
-.wrong {
+.isWrong {
   background-color: var(--github-red);
 }
 
