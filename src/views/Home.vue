@@ -1,6 +1,8 @@
 <template>
   <div class="home">
-    <div class="quiz-wrapper" v-if="totalQuestions > 0">
+    <div class="quiz-wrapper" v-if="totalQuestions < 0">Loading Quiz...</div>
+
+    <div class="quiz-wrapper" v-if="totalQuestions > 0 && noResult">
       <div class="span-group">
         <span>Score</span>
         <span>Answered</span>
@@ -9,41 +11,99 @@
       <div class="span-group">
         <span>{{ score }} / {{ totalQuestions }}</span>
         <span>{{ answered }} / {{ totalQuestions }}</span>
-        <span class="tag">{{ questionDifficulty }}</span>
+        <span class="tag" :style="{ color: difficultyGrade }">{{
+          questionDifficulty
+        }}</span>
       </div>
       <p class="title">Question {{ currentNum }} of {{ totalQuestions }}</p>
       <p class="question" v-html="currentQuestion"></p>
+      <!-- :class="answerClass(index)" -->
+      <!-- :class="answerClass(index)" -->
       <div
         class="options"
         v-for="(option, index) in allOptions"
         :key="option.index"
       >
         <p
-          :class="{ selected: isSelected && selectedIndex === index }"
           tabindex="0"
           v-html="option"
           @click="getVal(index)"
+          :class="[{ inactive: isSelected }]"
+          :style="[{ 'background-color': answerClass(index) }]"
         ></p>
-
-        <!-- :class="{
-            selected: 'selected === true',
-            isRight: 'correctAnswer === true',
-            isWrong: 'wrongAnswer === true',
-          }" -->
+        <!-- :style="{ width: scorePercent + '%' }" -->
       </div>
 
       <div class="paginate">
-        <button v-if="presentIndex === 0" @click="fetchQuiz">Refresh</button>
-        <button v-if="presentIndex > 0" @click="previousQuestion">
-          Previous
+        <button
+          v-if="presentIndex === 0"
+          @click="fetchQuiz"
+          @keydown.enter="fetchQuiz"
+        >
+          Refresh
         </button>
-        <button v-if="presentIndex < totalQuestions - 1" @click="nextQuestion">
+        <!-- <button
+          v-if="presentIndex > 0"
+          @click="previousQuestion"
+          @keydown.enter="previousQuestion"
+        >
+          Previous
+        </button> -->
+        <button
+          v-if="presentIndex < totalQuestions - 1"
+          @click="nextQuestion"
+          @keydown.enter="nextQuestion"
+        >
           Next
         </button>
-        <button v-if="presentIndex === totalQuestions - 1" @click="showResults">
+        <button
+          v-if="presentIndex === totalQuestions - 1"
+          @click="noResult = !noResult"
+          @keydown.enter="noResult = !noResult"
+        >
           View Results
         </button>
       </div>
+    </div>
+    <div class="score-wrapper" v-if="!noResult">
+      <p class="score-remark" v-if="scorePercent < 25">
+        So unfortunate this time!!! <br />
+        You scored too low.
+      </p>
+      <p class="score-remark" v-if="scorePercent >= 25 && scorePercent < 50">
+        So sad!!! <br />
+        You couldn't make the top 50%.
+      </p>
+      <p class="score-remark" v-if="scorePercent >= 50 && scorePercent < 75">
+        So good of you!!! <br />
+        You scored above average.
+      </p>
+      <p class="score-remark" v-if="scorePercent >= 75 && scorePercent < 99">
+        What a wonderful performance!!! <br />
+        You are in the top 25 percentile.
+      </p>
+      <p class="score-remark" v-if="scorePercent > 98">
+        Fantastic!!! <br />
+        So great of you to be in the top 1%.
+      </p>
+      <div class="score-container">
+        <p class="score">
+          You answered: {{ answered }} / {{ totalQuestions }} <br />
+          Scored: {{ score }} / {{ totalQuestions }} <br />
+          (Score in percentage: {{ scorePercent }}%)
+        </p>
+      </div>
+      <div class="score-container">
+        <div class="progress">
+          <div
+            class="progress-value"
+            :style="{ width: scorePercent + '%' }"
+          ></div>
+        </div>
+      </div>
+      <button class="play-again" @click="fetchQuiz" @keydown.enter="fetchQuiz">
+        Play Again
+      </button>
     </div>
   </div>
 </template>
@@ -68,27 +128,36 @@ export default {
       selectedIndex: null,
       isSelected: false,
       answered: 0,
+      // isAnswered: false,
       correctIndex: null,
-      correctAnswer: false,
-      wrongAnswer: false,
+      // correctAnswer: false,
+      // wrongAnswer: false,
+      noResult: true,
     };
   },
 
-	watch: {
-		presentIndex() {
-			this.isSelected = false;
-			this.shuffleOptions();
-		}
-	},
+  watch: {
+    presentIndex() {
+      this.isSelected = false;
+      // this.isAnswered = false;
+      this.selectedIndex = null;
+      this.shuffleOptions();
+      this.answerClass();
+    },
+  },
 
   methods: {
     async fetchQuiz() {
       try {
+        this.presentIndex = 0;
+        this.noResult = true;
+        this.answered = 0;
+        this.score = 0;
         // let response = await x.getQuestions(10);
-				const { data } = await x.getQuestions(10);
+        const { data } = await x.getQuestions(10);
         // console.log(response.data.results);
-				this.quizzes = data.results;
-				this.shuffleOptions();
+        this.quizzes = data.results;
+        this.shuffleOptions();
 
         // this.quizzes = response.data.results;
 
@@ -110,12 +179,18 @@ export default {
       }
     },
 
-		shuffleOptions() {
-			this.correctOption = this.quizzes[this.presentIndex].correct_answer;
-			const combinedOptions = [...this.quizzes[this.presentIndex].incorrect_answers, this.correctOption];
-			this.allOptions = _.shuffle(combinedOptions);
-			this.correctIndex = combinedOptions.indexOf(this.correctOption);
-		},
+    shuffleOptions() {
+      this.correctOption = this.quizzes[this.presentIndex].correct_answer;
+      const combinedOptions = [
+        ...this.quizzes[this.presentIndex].incorrect_answers,
+        this.correctOption,
+      ];
+      console.log(combinedOptions);
+      this.allOptions = _.shuffle(combinedOptions);
+      console.log(this.allOptions);
+      this.correctIndex = this.allOptions.indexOf(this.correctOption);
+      console.log("Correct index: ", this.correctIndex);
+    },
 
     previousQuestion() {
       this.presentIndex--;
@@ -131,16 +206,63 @@ export default {
       console.log(index);
       this.isSelected = true;
       this.answered++;
-      console.log(this.answered);
-      if (index === this.correctIndex) {
+
+      if (this.selectedIndex === this.correctIndex) {
         this.score++;
-        console.log(this.score);
-        this.correctAnswer = true;
+      }
+    },
+
+    answerClass(index) {
+      let k = "";
+      if (!this.isSelected && this.selectedIndex === index) {
+        k = "selected";
+      } else if (this.isSelected && this.correctIndex === index) {
+        // k = "is-right";
+        k = "var(--github-green-light)";
+      } else if (
+        this.isSelected &&
+        this.selectedIndex === index &&
+        this.correctIndex !== index
+      ) {
+        // k = "is-wrong";
+        k = "red";
+      } else if (
+        this.isSelected &&
+        this.correctIndex !== index
+      ) {
+        // k = "is-wrong";
+        k = "var(--github-red)";
+      }
+      return k;
+    },
+
+    gradeCheck() {
+      let colour = '';
+
+      if (this.questionDifficulty.includes("hard")) {
+        colour = "red";
       }
 
-      if (index !== this.correctIndex) {
-        this.wrongAnswer = true;
+      if (this.questionDifficulty.includes("medium")) {
+        colour = "green";
       }
+
+      if (this.questionDifficulty.includes("easy")) {
+        colour = "gray";
+      }
+
+      return colour;
+      // let colour = '';
+      // switch (this.questionDifficulty.toLowercase()) {
+      //   case x:
+      //     colour = 'var(--github-green'
+      //     break;
+      //   case y:
+      //     // code block
+      //     break;
+      //   default:
+      //   colour = 'var(--github-green'
+      // }
     },
   },
 
@@ -153,11 +275,9 @@ export default {
       return this.quizzes[this.presentIndex].difficulty;
     },
 
-    // difficultyGrade() {
-    //   if (this.questionDifficulty.lowercase === '') {
-    //     return 'green';
-    //   }
-    // },
+    difficultyGrade() {
+      return this.gradeCheck();
+    },
 
     currentNum() {
       return this.presentIndex + 1;
@@ -167,9 +287,10 @@ export default {
       return this.quizzes.length;
     },
 
-    // allOptions() {
-    //     return
-    // }
+    scorePercent() {
+      // return parseInt(parseInt(this.score) / parseInt(this.totalQuestions)).floor * 100;
+      return Math.floor((this.score / this.totalQuestions) * 100);
+    },
   },
 
   created() {
@@ -184,7 +305,8 @@ export default {
   height: 97vh;
 }
 
-.quiz-wrapper {
+.quiz-wrapper,
+.score-wrapper {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -198,6 +320,10 @@ export default {
   border-radius: 10px;
 }
 
+.score-wrapper {
+  border-color: var(--github-purple);
+}
+
 .span-group {
   display: flex;
   justify-content: space-between;
@@ -206,7 +332,6 @@ export default {
 }
 
 .tag {
-  color: var(--github-green);
   text-transform: uppercase;
 }
 
@@ -244,19 +369,24 @@ p {
   cursor: default;
 }
 
-.selected {
+/* .selected {
   border-color: var(--github-blue);
   background-color: var(--github-blue);
   box-shadow: 0 0 0 3px var(--github-lighter-blue);
   outline: none;
-}
+} */
 
-.isRight {
+/* .is-right {
   background-color: var(--github-green);
 }
 
-.isWrong {
+.is-wrong {
   background-color: var(--github-red);
+} */
+
+.inactive {
+  cursor: none;
+  pointer-events: none;
 }
 
 .paginate {
@@ -278,15 +408,74 @@ button:focus {
   background-color: var(--github-orange);
 }
 
+.score-remark,
+.score-card {
+  font-size: 40px;
+  font-weight: 700;
+}
+
+.score-container {
+  display: flex;
+  justify-content: center;
+  /* font-size: 40px;
+  font-weight: 700; */
+}
+
+.progress {
+  background: var(--github-black);
+  justify-content: flex-start;
+  border-radius: 100px;
+  align-items: center;
+  position: relative;
+  padding: 0 5px;
+  display: flex;
+  height: 40px;
+  width: 500px;
+}
+
+.progress-value {
+  /* animation: load 3s normal forwards; */
+  box-shadow: 0 10px 40px -10px var(--github-yellow);
+  border-radius: 100px;
+  background: var(--github-yellow);
+  height: 30px;
+  width: 0;
+}
+
+/* @keyframes load {
+  0% {
+    width: 0;
+  }
+  100% {
+    width: 68%;
+  }
+} */
+
+.play-again {
+  margin-top: 20px;
+}
+
 @media only screen and (max-width: 768px) {
-  .quiz-wrapper {
+  .quiz-wrapper,
+  .score-wrapper {
     width: 600px;
+  }
+
+  .score-remark,
+  .score-card {
+    font-size: 30px;
   }
 }
 
 @media only screen and (max-width: 425px) {
-  .quiz-wrapper {
+  .quiz-wrapper,
+  .score-wrapper {
     width: 300px;
+  }
+
+  .score-remark,
+  .score-card {
+    font-size: 20px;
   }
 }
 </style>
