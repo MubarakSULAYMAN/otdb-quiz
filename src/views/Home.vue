@@ -17,8 +17,6 @@
       </div>
       <p class="title">Question {{ currentNum }} of {{ totalQuestions }}</p>
       <p class="question" v-html="currentQuestion"></p>
-      <!-- :class="answerClass(index)" -->
-      <!-- :class="answerClass(index)" -->
       <div
         class="options"
         v-for="(option, index) in allOptions"
@@ -29,9 +27,8 @@
           v-html="option"
           @click="getVal(index)"
           :class="[{ inactive: isSelected }]"
-          :style="[{ 'background-color': answerClass(index) }]"
+          :style="[{ 'background-color': answerClass(index), color: isSelected ? 'white' : '' }]"
         ></p>
-        <!-- :style="{ width: scorePercent + '%' }" -->
       </div>
 
       <div class="paginate">
@@ -128,10 +125,7 @@ export default {
       selectedIndex: null,
       isSelected: false,
       answered: 0,
-      // isAnswered: false,
       correctIndex: null,
-      // correctAnswer: false,
-      // wrongAnswer: false,
       noResult: true,
     };
   },
@@ -139,7 +133,6 @@ export default {
   watch: {
     presentIndex() {
       this.isSelected = false;
-      // this.isAnswered = false;
       this.selectedIndex = null;
       this.shuffleOptions();
       this.answerClass();
@@ -153,27 +146,9 @@ export default {
         this.noResult = true;
         this.answered = 0;
         this.score = 0;
-        // let response = await x.getQuestions(10);
         const { data } = await x.getQuestions(10);
-        // console.log(response.data.results);
         this.quizzes = data.results;
         this.shuffleOptions();
-
-        // this.quizzes = response.data.results;
-
-        // this.correctOption =
-        //   response.data.results[this.presentIndex].correct_answer;
-        // this.incorrectOptions =
-        //   response.data.results[this.presentIndex].incorrect_answers;
-        // console.log(this.incorrectOptions);
-        // let combinedOptions = [...this.incorrectOptions, this.correctOption];
-        // this.allOptions = _.shuffle(combinedOptions);
-        // console.log(this.allOptions);
-        // console.log(combinedOptions);
-        // this.correctIndex = combinedOptions.indexOf(this.correctOption);
-        // console.log(this.correctIndex);
-
-        // if ([200, 201].includes()) {}
       } catch (e) {
         console.log(e);
       }
@@ -198,7 +173,6 @@ export default {
 
     nextQuestion() {
       this.presentIndex++;
-      // this.presentIndex = this.presentIndex + 1;
     },
 
     getVal(index) {
@@ -217,52 +191,34 @@ export default {
       if (!this.isSelected && this.selectedIndex === index) {
         k = "selected";
       } else if (this.isSelected && this.correctIndex === index) {
-        // k = "is-right";
         k = "var(--github-green-light)";
       } else if (
         this.isSelected &&
         this.selectedIndex === index &&
         this.correctIndex !== index
       ) {
-        // k = "is-wrong";
         k = "red";
-      } else if (
-        this.isSelected &&
-        this.correctIndex !== index
-      ) {
-        // k = "is-wrong";
+      } else if (this.isSelected && this.correctIndex !== index) {
         k = "var(--github-red)";
       }
       return k;
     },
 
     gradeCheck() {
-      let colour = '';
-
-      if (this.questionDifficulty.includes("hard")) {
-        colour = "red";
+      let colour = "";
+      switch (this.questionDifficulty) {
+        case 'hard':
+          colour = "red";
+          break;
+        case 'medium':
+          colour = "green";
+          break;
+        case 'easy':
+          colour = "gray";
+          break;
+        default:
       }
-
-      if (this.questionDifficulty.includes("medium")) {
-        colour = "green";
-      }
-
-      if (this.questionDifficulty.includes("easy")) {
-        colour = "gray";
-      }
-
       return colour;
-      // let colour = '';
-      // switch (this.questionDifficulty.toLowercase()) {
-      //   case x:
-      //     colour = 'var(--github-green'
-      //     break;
-      //   case y:
-      //     // code block
-      //     break;
-      //   default:
-      //   colour = 'var(--github-green'
-      // }
     },
   },
 
@@ -288,7 +244,6 @@ export default {
     },
 
     scorePercent() {
-      // return parseInt(parseInt(this.score) / parseInt(this.totalQuestions)).floor * 100;
       return Math.floor((this.score / this.totalQuestions) * 100);
     },
   },
@@ -417,12 +372,10 @@ button:focus {
 .score-container {
   display: flex;
   justify-content: center;
-  /* font-size: 40px;
-  font-weight: 700; */
 }
 
 .progress {
-  background: var(--github-black);
+  background: black;
   justify-content: flex-start;
   border-radius: 100px;
   align-items: center;
