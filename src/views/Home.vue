@@ -1,8 +1,21 @@
 <template>
   <div class="home">
-    <div class="quiz-wrapper" v-if="totalQuestions < 0">Loading Quiz...</div>
+    <the-welcome-modal
+      class="modal"
+      @modalVals="fetchQuiz"
+      v-if="noResult && showModal"
+    />
+    <div
+      class="quiz-wrapper"
+      v-if="totalQuestions < 0 && noResult && !showModal"
+    >
+      Loading Quiz...
+    </div>
 
-    <div class="quiz-wrapper" v-if="totalQuestions > 0 && noResult">
+    <div
+      class="quiz-wrapper"
+      v-if="totalQuestions > 0 && noResult && !showModal"
+    >
       <div class="span-group">
         <span>Score</span>
         <span>Answered</span>
@@ -27,25 +40,23 @@
           v-html="option"
           @click="getVal(index)"
           :class="[{ inactive: isSelected }]"
-          :style="[{ 'background-color': answerClass(index), color: isSelected ? 'white' : '' }]"
+          :style="[
+            {
+              'background-color': answerClass(index),
+              color: isSelected ? 'white' : '',
+            },
+          ]"
         ></p>
       </div>
 
       <div class="paginate">
         <button
           v-if="presentIndex === 0"
-          @click="fetchQuiz"
-          @keydown.enter="fetchQuiz"
+          @click="restart"
+          @keydown.enter="restart"
         >
-          Refresh
+          Restart
         </button>
-        <!-- <button
-          v-if="presentIndex > 0"
-          @click="previousQuestion"
-          @keydown.enter="previousQuestion"
-        >
-          Previous
-        </button> -->
         <button
           v-if="presentIndex < totalQuestions - 1"
           @click="nextQuestion"
@@ -98,7 +109,7 @@
           ></div>
         </div>
       </div>
-      <button class="play-again" @click="fetchQuiz" @keydown.enter="fetchQuiz">
+      <button class="play-again" @click="restart" @keydown.enter="restart">
         Play Again
       </button>
     </div>
@@ -108,10 +119,11 @@
 <script>
 import x from "@/utils/services/RequestHelpers.js";
 import _ from "lodash";
+import TheWelcomeModal from "../components/TheWelcomeModal.vue";
 
 export default {
   name: "Home",
-  components: {},
+  components: { TheWelcomeModal },
 
   data() {
     return {
@@ -127,6 +139,7 @@ export default {
       answered: 0,
       correctIndex: null,
       noResult: true,
+      showModal: true,
     };
   },
 
@@ -140,15 +153,30 @@ export default {
   },
 
   methods: {
-    async fetchQuiz() {
+    restart() {
+      this.showModal = true;
+      this.noResult = true;
+    },
+
+    async fetchQuiz(amount, category, difficulty, options_type) {
+      this.showModal = false;
+      console.log(amount, category, difficulty, options_type);
       try {
         this.presentIndex = 0;
-        this.noResult = true;
+        // this.noResult = true;
         this.answered = 0;
         this.score = 0;
-        const { data } = await x.getQuestions(10);
-        this.quizzes = data.results;
-        this.shuffleOptions();
+        const { data } = await x.getQuestions(
+          amount,
+          category,
+          difficulty,
+          options_type
+        );
+        console.log(data);
+        if ([0].includes(data.response_code)) {
+          this.quizzes = data.results;
+          this.shuffleOptions();
+        }
       } catch (e) {
         console.log(e);
       }
@@ -207,13 +235,13 @@ export default {
     gradeCheck() {
       let colour = "";
       switch (this.questionDifficulty) {
-        case 'hard':
+        case "hard":
           colour = "red";
           break;
-        case 'medium':
+        case "medium":
           colour = "green";
           break;
-        case 'easy':
+        case "easy":
           colour = "gray";
           break;
         default:
@@ -247,10 +275,6 @@ export default {
       return Math.floor((this.score / this.totalQuestions) * 100);
     },
   },
-
-  created() {
-    return this.fetchQuiz();
-  },
 };
 </script>
 
@@ -260,6 +284,7 @@ export default {
   height: 97vh;
 }
 
+.modal,
 .quiz-wrapper,
 .score-wrapper {
   position: absolute;
@@ -273,8 +298,10 @@ export default {
   padding: 10px;
   border: 5px solid var(--github-lighter-blue-fade);
   border-radius: 10px;
+  box-shadow: 10px 10px 30px #bebebe, -10px -10px 30px #ffffff;
 }
 
+.modal,
 .score-wrapper {
   border-color: var(--github-purple);
 }
@@ -309,6 +336,7 @@ p {
   width: fit-content;
   width: -moz-fit-content;
   width: max-content;
+  max-width: 100%;
   padding: 5px 15px;
   border-radius: 15px;
   background-color: var(--github-gray-light);
@@ -409,6 +437,7 @@ button:focus {
 }
 
 @media only screen and (max-width: 768px) {
+  .modal,
   .quiz-wrapper,
   .score-wrapper {
     width: 600px;
@@ -421,6 +450,7 @@ button:focus {
 }
 
 @media only screen and (max-width: 425px) {
+  .modal,
   .quiz-wrapper,
   .score-wrapper {
     width: 300px;
