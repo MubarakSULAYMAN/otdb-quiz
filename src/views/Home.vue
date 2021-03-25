@@ -1,20 +1,16 @@
 <template>
   <div class="home">
-    <the-welcome-modal
-      class="modal"
-      @modalVals="fetchQuiz"
-      v-if="noResult && showModal"
-    />
+    <the-welcome-modal class="modal" @modalVals="fetchQuiz" v-if="showModal" />
     <div
       class="quiz-wrapper"
-      v-if="totalQuestions < 0 && noResult && !showModal"
+      v-if="totalQuestions === 0 && showQuiz"
     >
       Loading Quiz...
     </div>
 
     <div
       class="quiz-wrapper"
-      v-if="totalQuestions > 0 && noResult && !showModal"
+      v-if="totalQuestions > 0 && showQuiz"
     >
       <div class="span-group">
         <span>Score</span>
@@ -52,8 +48,8 @@
       <div class="paginate">
         <button
           v-if="presentIndex === 0"
-          @click="restart"
-          @keydown.enter="restart"
+          @click="startAfresh"
+          @keydown.enter="startAfresh"
         >
           Restart
         </button>
@@ -66,6 +62,13 @@
         </button>
         <button
           v-if="presentIndex === totalQuestions - 1"
+          @click="noPreview = !noPreview"
+          @keydown.enter="noPreview = !noPreview"
+        >
+          Preview Responses
+        </button>
+        <button
+          v-if="presentIndex === totalQuestions - 1"
           @click="noResult = !noResult"
           @keydown.enter="noResult = !noResult"
         >
@@ -73,46 +76,27 @@
         </button>
       </div>
     </div>
-    <div class="score-wrapper" v-if="!noResult">
-      <p class="score-remark" v-if="scorePercent < 25">
-        So unfortunate this time!!! <br />
-        You scored too low.
-      </p>
-      <p class="score-remark" v-if="scorePercent >= 25 && scorePercent < 50">
-        So sad!!! <br />
-        You couldn't make the top 50%.
-      </p>
-      <p class="score-remark" v-if="scorePercent >= 50 && scorePercent < 75">
-        So good of you!!! <br />
-        You scored above average.
-      </p>
-      <p class="score-remark" v-if="scorePercent >= 75 && scorePercent < 99">
-        What a wonderful performance!!! <br />
-        You are in the top 25 percentile.
-      </p>
-      <p class="score-remark" v-if="scorePercent > 98">
-        Fantastic!!! <br />
-        So great of you to be in the top 1%.
-      </p>
-      <div class="score-container">
-        <p class="score">
-          You answered: {{ answered }} / {{ totalQuestions }} <br />
-          Scored: {{ score }} / {{ totalQuestions }} <br />
-          (Score in percentage: {{ scorePercent }}%)
-        </p>
-      </div>
-      <div class="score-container">
-        <div class="progress">
-          <div
-            class="progress-value"
-            :style="{ width: scorePercent + '%' }"
-          ></div>
-        </div>
-      </div>
-      <button class="play-again" @click="restart" @keydown.enter="restart">
-        Play Again
-      </button>
-    </div>
+
+    <the-quiz-preview
+      class="quiz"
+      :correctAnswers="correctAnswers"
+      :questions="all_questions"
+      :questionCount="totalQuestions"
+      :selectedAnswers="selectedAnswers"
+      :noResult="noResult"
+      @newUpdate="newUpdate"
+      v-if="!noPreview"
+    />
+
+    <the-scores
+      class="score-wrapper"
+      :answered="answered"
+      :score="score"
+      :scorePercent="scorePercent"
+      :totalQuestions="totalQuestions"
+      @replay="startAfresh"
+      v-if="!noResult"
+    />
   </div>
 </template>
 
@@ -120,19 +104,24 @@
 import x from "@/utils/services/RequestHelpers.js";
 import _ from "lodash";
 import TheWelcomeModal from "../components/TheWelcomeModal.vue";
+import TheQuizPreview from "@/components/TheQuizPreview.vue";
+import TheScores from "../components/TheScores.vue";
 
 export default {
   name: "Home",
-  components: { TheWelcomeModal },
+  components: { TheWelcomeModal, TheQuizPreview, TheScores },
 
   data() {
     return {
       presentIndex: 0,
       quizzes: [],
+      all_questions: [],
       correctOption: null,
+      correctAnswers: [],
       incorrectOptions: [],
       allOptions: [],
       selectedOption: null,
+      selectedAnswers: [],
       score: 0,
       selectedIndex: null,
       isSelected: false,
@@ -140,6 +129,7 @@ export default {
       correctIndex: null,
       noResult: true,
       showModal: true,
+      noPreview: true,
     };
   },
 
@@ -149,11 +139,12 @@ export default {
       this.selectedIndex = null;
       this.shuffleOptions();
       this.answerClass();
+      this.all_questions.push(this.quizzes[this.presentIndex].question);
     },
   },
 
   methods: {
-    restart() {
+    startAfresh() {
       this.showModal = true;
       this.noResult = true;
     },
@@ -163,7 +154,6 @@ export default {
       console.log(amount, category, difficulty, options_type);
       try {
         this.presentIndex = 0;
-        // this.noResult = true;
         this.answered = 0;
         this.score = 0;
         const { data } = await x.getQuestions(
@@ -193,6 +183,7 @@ export default {
       console.log(this.allOptions);
       this.correctIndex = this.allOptions.indexOf(this.correctOption);
       console.log("Correct index: ", this.correctIndex);
+      this.correctAnswers.push(this.allOptions[this.correctIndex]);
     },
 
     previousQuestion() {
@@ -205,6 +196,7 @@ export default {
 
     getVal(index) {
       this.selectedIndex = index;
+      this.selectedAnswers.push(this.allOptions[this.selectedIndex]);
       console.log(index);
       this.isSelected = true;
       this.answered++;
@@ -248,6 +240,11 @@ export default {
       }
       return colour;
     },
+
+    newUpdate() {
+      this.noPreview = !this.noPreview;
+      this.noResult = !this.noResult;
+    },
   },
 
   computed: {
@@ -274,6 +271,10 @@ export default {
     scorePercent() {
       return Math.floor((this.score / this.totalQuestions) * 100);
     },
+
+    showQuiz() {
+      return !this.showModal && this.noPreview && this.noResult
+    }
   },
 };
 </script>
@@ -281,7 +282,7 @@ export default {
 <style scoped>
 .home {
   position: relative;
-  height: 97vh;
+  min-height: 97vh;
 }
 
 .modal,
@@ -391,49 +392,13 @@ button:focus {
   background-color: var(--github-orange);
 }
 
-.score-remark,
+.quiz {
+  margin: 50px;
+}
+
 .score-card {
   font-size: 40px;
   font-weight: 700;
-}
-
-.score-container {
-  display: flex;
-  justify-content: center;
-}
-
-.progress {
-  background: black;
-  justify-content: flex-start;
-  border-radius: 100px;
-  align-items: center;
-  position: relative;
-  padding: 0 5px;
-  display: flex;
-  height: 40px;
-  width: 500px;
-}
-
-.progress-value {
-  /* animation: load 3s normal forwards; */
-  box-shadow: 0 10px 40px -10px var(--github-yellow);
-  border-radius: 100px;
-  background: var(--github-yellow);
-  height: 30px;
-  width: 0;
-}
-
-/* @keyframes load {
-  0% {
-    width: 0;
-  }
-  100% {
-    width: 68%;
-  }
-} */
-
-.play-again {
-  margin-top: 20px;
 }
 
 @media only screen and (max-width: 768px) {
@@ -443,7 +408,6 @@ button:focus {
     width: 600px;
   }
 
-  .score-remark,
   .score-card {
     font-size: 30px;
   }
@@ -456,9 +420,12 @@ button:focus {
     width: 300px;
   }
 
-  .score-remark,
   .score-card {
     font-size: 20px;
+  }
+
+  button:first-child {
+    margin-right: 20px;
   }
 }
 </style>

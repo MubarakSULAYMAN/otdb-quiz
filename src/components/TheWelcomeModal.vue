@@ -87,14 +87,26 @@ export default {
     },
 
     updateCategory(val) {
+      // if (val.normalize() === "any".normalize()) {
+      //   this.amount = "";
+      // } else 
+
       this.category = val;
     },
 
     updateDifficulty(val) {
+      // if (val.normalize() === "any".normalize()) {
+      //   this.amount = "";
+      // } else 
+
       this.difficulty = val;
     },
 
     updateOptionsType(val) {
+      // if (val.normalize() === "any".normalize()) {
+      //   this.amount = "";
+      // } else 
+
       this.options_type = val;
     },
 
@@ -155,7 +167,6 @@ button {
   padding: 10px 0;
   color: #ffffff;
   background-color: var(--github-purple);
-  /* border: 2px transparent var(--github-purple); */
   border: 2px solid transparent;
   border-radius: 5px;
   outline: none;
@@ -164,7 +175,6 @@ button {
 button:hover button:focus {
   color: var(--github-purple);
   background-color: #ffffff;
-  /* border-style: solid; */
   border-color: var(--github-purple);
 }
 

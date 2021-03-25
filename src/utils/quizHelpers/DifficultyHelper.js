@@ -1,5 +1,6 @@
 const quizDifficulties = [
   {
+    // value: "any",
     value: "",
     name: "Any Difficulty",
   },
